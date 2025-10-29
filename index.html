@@ -755,5 +755,11 @@
         document.getElementById('drawName').addEventListener('input', saveData);
         loadData();
     </script>
+    <!-- Cheer sound (local, same-origin) -->
+<audio id="win-sfx" src="./assets/win.mp3" preload="auto" playsinline></audio>
+
+<!-- Confetti (in <head> already) and enhancer loader -->
+<script src="./enhancers/win-effects.js?v=2"></script>
+
 </body>
 </html>
