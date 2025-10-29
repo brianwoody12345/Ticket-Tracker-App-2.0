@@ -374,6 +374,13 @@
         .clear-all-btn:hover {
             background: #c0392b;
         }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #7f8c8d;
+            font-style: italic;
+        }
     </style>
 </head>
 <body>
@@ -411,7 +418,9 @@
                 <!-- Display Ranges -->
                 <div class="ranges-display">
                     <h3>Your Ticket Ranges</h3>
-                    <div class="color-sections" id="colorSections"></div>
+                    <div class="color-sections" id="colorSections">
+                        <div class="empty-state">No ticket ranges added yet. Add your first range above!</div>
+                    </div>
                 </div>
             </div>
 
@@ -427,7 +436,7 @@
 
                 <div class="ticket-input">
                     <select id="ticketColor">
-                        <!-- Dynamically populated based on available colors -->
+                        <option value="">No colors available</option>
                     </select>
                     
                     <input type="text" placeholder="Full ticket number" id="ticketNumber">
@@ -437,7 +446,9 @@
                 </div>
 
                 <!-- Display Called Tickets -->
-                <div class="called-tickets" id="calledTickets"></div>
+                <div class="called-tickets" id="calledTickets">
+                    <div class="empty-state">No tickets called yet. Add called tickets above!</div>
+                </div>
             </div>
         </div>
 
@@ -461,10 +472,7 @@
             navy: 'Navy'
         };
 
-        let ranges = { 
-            red: [{start: 10000000, end: 10000999}], // Default red range
-            blue: [{start: 20000000, end: 20000999}] // Default blue range
-        };
+        let ranges = {}; // Start completely empty - no preloaded ranges!
         let calledTickets = [];
         let currentInputMode = 'full';
 
@@ -538,6 +546,12 @@
 
         function addCalledTicket() {
             const color = document.getElementById('ticketColor').value;
+            
+            if (!color) {
+                alert('Please add ticket ranges first before calling tickets');
+                return;
+            }
+            
             let ticketData = {};
             
             if (currentInputMode === 'full') {
@@ -639,10 +653,7 @@
 
         function clearAll() {
             if (confirm('Are you sure you want to clear all data?')) {
-                ranges = { 
-                    red: [{start: 10000000, end: 10000999}],
-                    blue: [{start: 20000000, end: 20000999}]
-                };
+                ranges = {}; // Reset to completely empty
                 calledTickets = [];
                 document.getElementById('drawName').value = '';
                 localStorage.removeItem('raffleRanges');
@@ -655,24 +666,30 @@
         function updateDisplay() {
             // Update available colors in ticket color dropdown
             const ticketColorSelect = document.getElementById('ticketColor');
-            ticketColorSelect.innerHTML = '';
+            const colorKeys = Object.keys(ranges).filter(color => ranges[color] && ranges[color].length > 0);
             
-            Object.keys(ranges).forEach(color => {
-                if (ranges[color] && ranges[color].length > 0) {
+            if (colorKeys.length === 0) {
+                ticketColorSelect.innerHTML = '<option value="">No colors available</option>';
+            } else {
+                ticketColorSelect.innerHTML = '';
+                colorKeys.forEach(color => {
                     const option = document.createElement('option');
                     option.value = color;
                     option.textContent = availableColors[color];
                     option.className = `color-${color}`;
                     ticketColorSelect.appendChild(option);
-                }
-            });
+                });
+            }
 
             // Update ranges display
             const colorSections = document.getElementById('colorSections');
-            colorSections.innerHTML = '';
-
-            Object.keys(ranges).forEach(color => {
-                if (ranges[color] && ranges[color].length > 0) {
+            const colorKeysForDisplay = Object.keys(ranges).filter(color => ranges[color] && ranges[color].length > 0);
+            
+            if (colorKeysForDisplay.length === 0) {
+                colorSections.innerHTML = '<div class="empty-state">No ticket ranges added yet. Add your first range above!</div>';
+            } else {
+                colorSections.innerHTML = '';
+                colorKeysForDisplay.forEach(color => {
                     const section = document.createElement('div');
                     section.className = `color-section ${color}`;
                     
@@ -693,40 +710,45 @@
                     section.appendChild(header);
                     section.appendChild(rangesContainer);
                     colorSections.appendChild(section);
-                }
-            });
+                });
+            }
 
             // Update called tickets display
-            document.getElementById('calledTickets').innerHTML = calledTickets.map((ticket, index) => {
-                const isWinner = isWinningTicket(ticket);
-                const winningNumbers = getWinningNumbers(ticket);
-                
-                return `
-                    <div class="ticket-item ${ticket.color} ${isWinner ? 'winner' : 'loser'}">
-                        <div class="ticket-info">
-                            <span class="ticket-number">
-                                ${ticket.inputMode === 'full' ? formatTicketNumber(ticket.fullNumber) : `XXX-${ticket.lastThree}`}
-                            </span>
-                            <span class="ticket-color">${availableColors[ticket.color]}</span>
-                            <span class="ticket-mode">(${ticket.inputMode === 'full' ? 'full' : 'last 3'})</span>
-                            <span class="ticket-time">${ticket.timestamp}</span>
+            const calledTicketsContainer = document.getElementById('calledTickets');
+            if (calledTickets.length === 0) {
+                calledTicketsContainer.innerHTML = '<div class="empty-state">No tickets called yet. Add called tickets above!</div>';
+            } else {
+                calledTicketsContainer.innerHTML = calledTickets.map((ticket, index) => {
+                    const isWinner = isWinningTicket(ticket);
+                    const winningNumbers = getWinningNumbers(ticket);
+                    
+                    return `
+                        <div class="ticket-item ${ticket.color} ${isWinner ? 'winner' : 'loser'}">
+                            <div class="ticket-info">
+                                <span class="ticket-number">
+                                    ${ticket.inputMode === 'full' ? formatTicketNumber(ticket.fullNumber) : `XXX-${ticket.lastThree}`}
+                                </span>
+                                <span class="ticket-color">${availableColors[ticket.color]}</span>
+                                <span class="ticket-mode">(${ticket.inputMode === 'full' ? 'full' : 'last 3'})</span>
+                                <span class="ticket-time">${ticket.timestamp}</span>
+                            </div>
+                            
+                            <div class="ticket-result">
+                                ${isWinner ? `
+                                    <div>
+                                        <div>🎉 WINNER!</div>
+                                        ${ticket.inputMode === 'lastThree' && winningNumbers.length > 0 ? `
+                                            <div class="winning-numbers">Matching: ${winningNumbers.map(formatTicketNumber).join(', ')}</div>
+                                        ` : ''}
+                                    </div>
+                                ` : '❌ Not in range'}
+                            </div>
+                            
+                            <button onclick="deleteCalledTicket(${index})" class="delete-ticket">×</button>
                         </div>
-                        
-                        <div class="ticket-result">
-                            ${isWinner ? `
-                                <div>
-                                    <div>🎉 WINNER!</div>
-                                    ${ticket.inputMode === 'lastThree' && winningNumbers.length > 0 ? `
-                                        <div class="winning-numbers">Matching: ${winningNumbers.map(formatTicketNumber).join(', ')}</div>
-                                    ` : ''}
-                                </div>
-                            ` : '❌ Not in range'}
-                        </div>
-                        
-                        <button onclick="deleteCalledTicket(${index})" class="delete-ticket">×</button>
-                    </div>
-                `;
-            }).join('') || '<p>No tickets called yet</p>';
+                    `;
+                }).join('');
+            }
         }
 
         // Initialize
