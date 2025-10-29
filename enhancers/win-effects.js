@@ -1,19 +1,28 @@
-/* Confetti + MP3 cheer on NEW winning tickets (no stage mode). */
+/* Confetti + cheer (autoplay safe) for NEW winners. */
 (function () {
+  // Feature toggles via localStorage (for tests)
   const confettiEnabled = localStorage.getItem('confettiEnabled') !== 'false';
   const soundEnabled = localStorage.getItem('soundEnabled') !== 'false';
+
+  // Keep track of rows we've already celebrated
   const celebrated = new Set();
 
-  // ---- MP3 sound (preferred) ----
-  const audioEl = document.getElementById('win-sfx');
-  if (audioEl) {
-    // Set comfortable default volume; tweak as you like (0.0–1.0)
-    audioEl.volume = Number(localStorage.getItem('winVolume') ?? 0.8);
+  // --- Audio setup (uses #win-sfx, creates one if missing) ---
+  let audioEl = document.getElementById('win-sfx');
+  if (!audioEl) {
+    audioEl = document.createElement('audio');
+    audioEl.id = 'win-sfx';
+    audioEl.src = './win.mp3';
+    audioEl.preload = 'auto';
+    audioEl.setAttribute('playsinline', '');
+    document.body.appendChild(audioEl);
   }
+  // reasonable default volume, user can change via localStorage
+  audioEl.volume = Number(localStorage.getItem('winVolume') ?? 0.8);
 
-  // ---- Minimal WebAudio fallback (only if MP3 fails) ----
+  // WebAudio tiny fallback chime (if mp3 play() is blocked/fails)
   let audioCtx = null;
-  function playFallbackChime() {
+  function fallbackChime() {
     try {
       const Ctx = window.AudioContext || window.webkitAudioContext;
       if (!Ctx) return;
@@ -24,79 +33,111 @@
       const osc = audioCtx.createOscillator();
       const g = audioCtx.createGain();
       osc.type = 'triangle';
-      osc.frequency.value = 1046.5; // C6
+      osc.frequency.value = 1244.5; // D#6
       g.gain.setValueAtTime(0.0001, now);
-      g.gain.exponentialRampToValueAtTime(0.22, now + 0.015);
-      g.gain.exponentialRampToValueAtTime(0.0001, now + 0.16);
+      g.gain.exponentialRampToValueAtTime(0.18, now + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + 0.20);
       osc.connect(g); g.connect(audioCtx.destination);
-      osc.start(now); osc.stop(now + 0.2);
+      osc.start(now); osc.stop(now + 0.22);
     } catch {}
   }
 
-  // Prime on first user gesture so browsers allow play()
-  function prime() {
-    if (audioEl) {
-      audioEl.play().then(() => {
-        audioEl.pause(); audioEl.currentTime = 0;
-      }).catch(() => {/* ignore */});
-    } else {
-      // create AudioContext early so fallback is allowed
-      try {
-        const Ctx = window.AudioContext || window.webkitAudioContext;
-        if (Ctx && !audioCtx) audioCtx = new Ctx();
-      } catch {}
-    }
-    window.removeEventListener('pointerdown', prime, true);
-    window.removeEventListener('keydown', prime, true);
-  }
-  window.addEventListener('pointerdown', prime, true);
-  window.addEventListener('keydown', prime, true);
+  // Autoplay primer: after first user interaction, browsers allow play()
+  function primeOnce() {
+    // try to unlock media
+    audioEl.play().then(() => {
+      audioEl.pause(); audioEl.currentTime = 0;
+    }).catch(() => {/* ignore */});
 
+    // prepare WebAudio too (for fallback)
+    try {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (Ctx && !audioCtx) audioCtx = new Ctx();
+    } catch {}
+
+    window.removeEventListener('pointerdown', primeOnce, true);
+    window.removeEventListener('keydown', primeOnce, true);
+    window.removeEventListener('touchstart', primeOnce, true);
+  }
+  window.addEventListener('pointerdown', primeOnce, true);
+  window.addEventListener('keydown', primeOnce, true);
+  window.addEventListener('touchstart', primeOnce, true);
+
+  // Play cheer with robust fallback + one-click retry if autoplay blocked
   function playWinSound() {
-    if (!soundEnabled) return;
-    if (audioEl) {
+    if (!soundEnabled || !audioEl) return;
+    try {
       audioEl.currentTime = 0;
-      audioEl.play().catch(playFallbackChime);
-    } else {
-      playFallbackChime();
+      const p = audioEl.play();
+      if (p && typeof p.then === 'function') {
+        p.catch(() => {
+          // Wait for one user click then play
+          const once = () => { audioEl.play().catch(fallbackChime); };
+          document.body.addEventListener('click', once, { once: true });
+          console.log('🔈 Autoplay blocked—will play after next click.');
+        });
+      }
+    } catch {
+      fallbackChime();
     }
   }
 
-  function celebrateOnce(key, colorHex) {
-    if (celebrated.has(key)) return;
-    celebrated.add(key);
-
-    if (confettiEnabled && window.confetti) {
-      const colors = colorHex ? [colorHex, '#ffffff'] : ['#22d3ee', '#a78bfa', '#f97316', '#34d399'];
-      confetti({ particleCount: 90, spread: 70, origin: { y: 0.6 }, colors });
-      confetti({ particleCount: 60, angle: 60, spread: 55, origin: { x: 0 }, colors });
-      confetti({ particleCount: 60, angle: 120, spread: 55, origin: { x: 1 }, colors });
-    }
-    playWinSound();
-  }
-
-  // Color → hex map for confetti
+  // Simple color→hex for confetti palette
   const colorHexMap = {
     Red: '#e74c3c', Blue: '#3498db', Green: '#27ae60', Yellow: '#f39c12',
     Purple: '#9b59b6', Orange: '#e67e22', Pink: '#e91e63', Brown: '#795548',
     Black: '#2c3e50', Gray: '#7f8c8d', Teal: '#009688', Navy: '#34495e'
   };
 
-  // Wrap existing addCalledTicket to keep your core logic untouched
-  const original = window.addCalledTicket;
-  if (typeof original !== 'function') return;
+  function celebrateOnce(key, colorName) {
+    if (celebrated.has(key)) return;
+    celebrated.add(key);
+
+    // Confetti
+    if (confettiEnabled && typeof window.confetti === 'function') {
+      const c = colorHexMap[colorName] || '#22d3ee';
+      const colors = [c, '#ffffff'];
+      window.confetti({ particleCount: 90, spread: 70, origin: { y: 0.6 }, colors });
+      window.confetti({ particleCount: 60, angle: 60, spread: 55, origin: { x: 0 }, colors });
+      window.confetti({ particleCount: 60, angle: 120, spread: 55, origin: { x: 1 }, colors });
+    }
+
+    // Sound
+    playWinSound();
+  }
+
+  // Wrap existing addCalledTicket so your core logic stays untouched
+  const originalAdd = window.addCalledTicket;
+  if (typeof originalAdd !== 'function') {
+    console.warn('[win-effects] addCalledTicket not found; effects idle.');
+    return;
+  }
 
   window.addCalledTicket = function () {
-    original.apply(this, arguments);
+    // Call original logic
+    originalAdd.apply(this, arguments);
+
+    // After DOM renders the new row, detect and celebrate if winner
     setTimeout(() => {
       const first = document.querySelector('.called-tickets .ticket-item');
       if (!first || !first.classList.contains('winner')) return;
 
       const numText = first.querySelector('.ticket-number')?.textContent?.trim() || '';
       const colorText = first.querySelector('.ticket-color')?.textContent?.trim() || '';
-      const key = `${colorText}:${numText}`;
-      const hex = colorHexMap[colorText];
-      celebrateOnce(key, hex);
-    }, 50);
+      const key = `${colorText}::${numText}`;
+      celebrateOnce(key, colorText);
+    }, 60);
   };
+
+  // Also handle page visibility—if the row appeared while tab hidden,
+  // celebrate when the tab becomes visible (prevents missing the cheer)
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') return;
+    const first = document.querySelector('.called-tickets .ticket-item');
+    if (!first || !first.classList.contains('winner')) return;
+    const numText = first.querySelector('.ticket-number')?.textContent?.trim() || '';
+    const colorText = first.querySelector('.ticket-color')?.textContent?.trim() || '';
+    const key = `${colorText}::${numText}`;
+    if (!celebrated.has(key)) celebrateOnce(key, colorText);
+  });
 })();
