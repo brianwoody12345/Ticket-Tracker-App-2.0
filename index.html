@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+    
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -382,6 +383,8 @@
             font-style: italic;
         }
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+
 </head>
 <body>
     <div class="app">
@@ -530,19 +533,32 @@
             updateDisplay();
         }
 
-        function setInputMode(mode) {
-            currentInputMode = mode;
-            document.querySelectorAll('.toggle-btn').forEach(btn => btn.classList.remove('active'));
-            event.target.classList.add('active');
-            
-            if (mode === 'full') {
-                document.getElementById('ticketNumber').style.display = 'block';
-                document.getElementById('ticketLastThree').style.display = 'none';
-            } else {
-                document.getElementById('ticketNumber').style.display = 'none';
-                document.getElementById('ticketLastThree').style.display = 'block';
-            }
-        }
+       function setInputMode(mode, evt) {
+  currentInputMode = mode;
+
+  // Toggle active styles safely (works with or without an event)
+  const buttons = document.querySelectorAll('.input-mode-toggle .toggle-btn');
+  buttons.forEach(btn => btn.classList.remove('active'));
+  if (evt && evt.target) {
+    evt.target.classList.add('active');
+  } else {
+    const fullBtn = [...buttons].find(b => /Full Number/i.test(b.textContent));
+    const last3Btn = [...buttons].find(b => /Last 3/i.test(b.textContent));
+    (mode === 'full' ? fullBtn : last3Btn)?.classList.add('active');
+  }
+
+  // Show/hide inputs
+  const full = document.getElementById('ticketNumber');
+  const last = document.getElementById('ticketLastThree');
+  if (mode === 'full') {
+    full.style.display = 'block';
+    last.style.display = 'none';
+  } else {
+    full.style.display = 'none';
+    last.style.display = 'block';
+  }
+}
+
 
         function addCalledTicket() {
             const color = document.getElementById('ticketColor').value;
@@ -755,9 +771,9 @@
         document.getElementById('drawName').addEventListener('input', saveData);
         loadData();
     </script>
-    <!-- Cheer sound (local, same-origin) -->
+    <script src="./enhancers/win-effects.js"></script>
 <audio id="win-sfx" src="./win.mp3" preload="auto" playsinline></audio>
-<script src="./enhancers/win-effects.js?v=3"></script>
+<script src="./enhancers/win-effects.js?v=2"></script>
 
 </body>
 </html>
