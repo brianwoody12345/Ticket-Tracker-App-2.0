@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Raffle Ticket Tracker</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .app {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+
+        .app-header {
+            background: linear-gradient(135deg, #2c3e50, #34495e);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            position: relative;
+        }
+
+        .app-header h1 {
+            font-size: 2.5em;
+            margin-bottom: 5px;
+        }
+
+        .app-credit {
+            font-size: 0.9em;
+            opacity: 0.8;
+            margin-bottom: 15px;
+        }
+
+        .draw-name-input {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 25px;
+            font-size: 1.1em;
+            width: 300px;
+            text-align: center;
+            background: rgba(255, 255, 255, 0.9);
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            padding: 30px;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .section {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 10px;
+            border: 1px solid #e9ecef;
+        }
+
+        .section h2 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+
+        .input-mode-toggle {
+            display: flex;
+            margin-bottom: 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .toggle-btn {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            background: #f8f9fa;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .toggle-btn.active {
+            background: #3498db;
+            color: white;
+        }
+
+        .range-input, .ticket-input {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .range-input input, .ticket-input input,
+        .range-input select, .ticket-input select {
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 1em;
+            flex: 1;
+            min-width: 120px;
+        }
+
+        /* Color-specific styles for dropdown options */
+        .color-red { color: #e74c3c; }
+        .color-blue { color: #3498db; }
+        .color-green { color: #27ae60; }
+        .color-yellow { color: #f39c12; }
+        .color-purple { color: #9b59b6; }
+        .color-orange { color: #e67e22; }
+        .color-pink { color: #e91e63; }
+        .color-brown { color: #795548; }
+        .color-black { color: #2c3e50; }
+        .color-gray { color: #7f8c8d; }
+        .color-teal { color: #009688; }
+        .color-navy { color: #34495e; }
+
+        .range-input button, .ticket-input button {
+            padding: 10px 20px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background 0.3s;
+        }
+
+        .range-input button:hover, .ticket-input button:hover {
+            background: #2980b9;
+        }
+
+        .ranges-display h3 {
+            color: #34495e;
+            margin-bottom: 15px;
+        }
+
+        .color-sections {
+            display: grid;
+            gap: 15px;
+        }
+
+        .color-section {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid;
+        }
+
+        /* Color-specific border colors */
+        .color-section.red { border-left-color: #e74c3c; }
+        .color-section.blue { border-left-color: #3498db; }
+        .color-section.green { border-left-color: #27ae60; }
+        .color-section.yellow { border-left-color: #f39c12; }
+        .color-section.purple { border-left-color: #9b59b6; }
+        .color-section.orange { border-left-color: #e67e22; }
+        .color-section.pink { border-left-color: #e91e63; }
+        .color-section.brown { border-left-color: #795548; }
+        .color-section.black { border-left-color: #2c3e50; }
+        .color-section.gray { border-left-color: #7f8c8d; }
+        .color-section.teal { border-left-color: #009688; }
+        .color-section.navy { border-left-color: #34495e; }
+
+        .color-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #ecf0f1;
+        }
+
+        /* Color-specific text colors */
+        .color-header.red { color: #e74c3c; }
+        .color-header.blue { color: #3498db; }
+        .color-header.green { color: #27ae60; }
+        .color-header.yellow { color: #f39c12; }
+        .color-header.purple { color: #9b59b6; }
+        .color-header.orange { color: #e67e22; }
+        .color-header.pink { color: #e91e63; }
+        .color-header.brown { color: #795548; }
+        .color-header.black { color: #2c3e50; }
+        .color-header.gray { color: #7f8c8d; }
+        .color-header.teal { color: #009688; }
+        .color-header.navy { color: #34495e; }
+
+        .range-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            margin: 5px 0;
+            background: #ecf0f1;
+            border-radius: 5px;
+            border-left: 3px solid;
+        }
+
+        /* Color-specific range item borders */
+        .range-item.red { border-left-color: #e74c3c; }
+        .range-item.blue { border-left-color: #3498db; }
+        .range-item.green { border-left-color: #27ae60; }
+        .range-item.yellow { border-left-color: #f39c12; }
+        .range-item.purple { border-left-color: #9b59b6; }
+        .range-item.orange { border-left-color: #e67e22; }
+        .range-item.pink { border-left-color: #e91e63; }
+        .range-item.brown { border-left-color: #795548; }
+        .range-item.black { border-left-color: #2c3e50; }
+        .range-item.gray { border-left-color: #7f8c8d; }
+        .range-item.teal { border-left-color: #009688; }
+        .range-item.navy { border-left-color: #34495e; }
+
+        .range-item span {
+            flex: 1;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+        }
+
+        .range-item button {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 25px;
+            height: 25px;
+            cursor: pointer;
+        }
+
+        .ticket-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border-left: 4px solid;
+            background: white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        /* Color-specific ticket borders */
+        .ticket-item.red { border-left-color: #e74c3c; }
+        .ticket-item.blue { border-left-color: #3498db; }
+        .ticket-item.green { border-left-color: #27ae60; }
+        .ticket-item.yellow { border-left-color: #f39c12; }
+        .ticket-item.purple { border-left-color: #9b59b6; }
+        .ticket-item.orange { border-left-color: #e67e22; }
+        .ticket-item.pink { border-left-color: #e91e63; }
+        .ticket-item.brown { border-left-color: #795548; }
+        .ticket-item.black { border-left-color: #2c3e50; }
+        .ticket-item.gray { border-left-color: #7f8c8d; }
+        .ticket-item.teal { border-left-color: #009688; }
+        .ticket-item.navy { border-left-color: #34495e; }
+
+        .ticket-item.winner {
+            background: #d4edda;
+        }
+
+        .ticket-item.loser {
+            background: #f8d7da;
+        }
+
+        .ticket-info {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex: 1;
+            flex-wrap: wrap;
+        }
+
+        .ticket-number {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #2c3e50;
+            font-family: 'Courier New', monospace;
+        }
+
+        .ticket-color {
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            color: white;
+            text-transform: uppercase;
+        }
+
+        /* Color-specific ticket color badges */
+        .ticket-item.red .ticket-color { background: #e74c3c; }
+        .ticket-item.blue .ticket-color { background: #3498db; }
+        .ticket-item.green .ticket-color { background: #27ae60; }
+        .ticket-item.yellow .ticket-color { background: #f39c12; }
+        .ticket-item.purple .ticket-color { background: #9b59b6; }
+        .ticket-item.orange .ticket-color { background: #e67e22; }
+        .ticket-item.pink .ticket-color { background: #e91e63; }
+        .ticket-item.brown .ticket-color { background: #795548; }
+        .ticket-item.black .ticket-color { background: #2c3e50; }
+        .ticket-item.gray .ticket-color { background: #7f8c8d; }
+        .ticket-item.teal .ticket-color { background: #009688; }
+        .ticket-item.navy .ticket-color { background: #34495e; }
+
+        .ticket-mode {
+            font-size: 0.8em;
+            color: #7f8c8d;
+            font-style: italic;
+        }
+
+        .ticket-time {
+            color: #7f8c8d;
+            font-size: 0.9em;
+        }
+
+        .ticket-result {
+            font-weight: bold;
+            margin: 0 15px;
+            text-align: center;
+        }
+
+        .ticket-item.winner .ticket-result {
+            color: #28a745;
+        }
+
+        .ticket-item.loser .ticket-result {
+            color: #dc3545;
+        }
+
+        .winning-numbers {
+            font-size: 0.8em;
+            font-weight: normal;
+            margin-top: 5px;
+            color: #1e7e34;
+        }
+
+        .delete-ticket {
+            background: #95a5a6;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 25px;
+            height: 25px;
+            cursor: pointer;
+        }
+
+        .clear-all-btn {
+            display: block;
+            margin: 20px auto;
+            padding: 10px 25px;
+            background: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background 0.3s;
+        }
+
+        .clear-all-btn:hover {
+            background: #c0392b;
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <header class="app-header">
+            <h1>🎟️ Raffle Ticket Tracker</h1>
+            <div class="app-credit">App by Woody Calculus</div>
+            <input type="text" placeholder="Enter draw name..." class="draw-name-input" id="drawName">
+        </header>
+
+        <div class="container">
+            <!-- Add Ranges Section -->
+            <div class="section">
+                <h2>Add Your Ticket Ranges</h2>
+                <div class="range-input">
+                    <select id="rangeColor">
+                        <option value="red" class="color-red">Red</option>
+                        <option value="blue" class="color-blue">Blue</option>
+                        <option value="green" class="color-green">Green</option>
+                        <option value="yellow" class="color-yellow">Yellow</option>
+                        <option value="purple" class="color-purple">Purple</option>
+                        <option value="orange" class="color-orange">Orange</option>
+                        <option value="pink" class="color-pink">Pink</option>
+                        <option value="brown" class="color-brown">Brown</option>
+                        <option value="black" class="color-black">Black</option>
+                        <option value="gray" class="color-gray">Gray</option>
+                        <option value="teal" class="color-teal">Teal</option>
+                        <option value="navy" class="color-navy">Navy</option>
+                    </select>
+                    <input type="text" placeholder="Start number" id="rangeStart">
+                    <input type="text" placeholder="End number" id="rangeEnd">
+                    <button onclick="addRange()">Add Range</button>
+                </div>
+
+                <!-- Display Ranges -->
+                <div class="ranges-display">
+                    <h3>Your Ticket Ranges</h3>
+                    <div class="color-sections" id="colorSections"></div>
+                </div>
+            </div>
+
+            <!-- Called Tickets Section -->
+            <div class="section">
+                <h2>Called Tickets</h2>
+                
+                <!-- Input Mode Toggle -->
+                <div class="input-mode-toggle">
+                    <button class="toggle-btn active" onclick="setInputMode('full')">Full Number</button>
+                    <button class="toggle-btn" onclick="setInputMode('lastThree')">Last 3 Digits</button>
+                </div>
+
+                <div class="ticket-input">
+                    <select id="ticketColor">
+                        <!-- Dynamically populated based on available colors -->
+                    </select>
+                    
+                    <input type="text" placeholder="Full ticket number" id="ticketNumber">
+                    <input type="text" placeholder="Last 3 digits" id="ticketLastThree" style="display: none;" maxlength="3">
+                    
+                    <button onclick="addCalledTicket()">Add Called Ticket</button>
+                </div>
+
+                <!-- Display Called Tickets -->
+                <div class="called-tickets" id="calledTickets"></div>
+            </div>
+        </div>
+
+        <button onclick="clearAll()" class="clear-all-btn">Clear All Data</button>
+    </div>
+
+    <script>
+        // Available colors with their display names
+        const availableColors = {
+            red: 'Red',
+            blue: 'Blue', 
+            green: 'Green',
+            yellow: 'Yellow',
+            purple: 'Purple',
+            orange: 'Orange',
+            pink: 'Pink',
+            brown: 'Brown',
+            black: 'Black',
+            gray: 'Gray',
+            teal: 'Teal',
+            navy: 'Navy'
+        };
+
+        let ranges = { 
+            red: [{start: 10000000, end: 10000999}], // Default red range
+            blue: [{start: 20000000, end: 20000999}] // Default blue range
+        };
+        let calledTickets = [];
+        let currentInputMode = 'full';
+
+        // Load from localStorage
+        function loadData() {
+            const savedRanges = localStorage.getItem('raffleRanges');
+            const savedTickets = localStorage.getItem('calledTickets');
+            const savedDrawName = localStorage.getItem('drawName');
+            
+            if (savedRanges) ranges = JSON.parse(savedRanges);
+            if (savedTickets) calledTickets = JSON.parse(savedTickets);
+            if (savedDrawName) document.getElementById('drawName').value = savedDrawName;
+            
+            updateDisplay();
+        }
+
+        // Save to localStorage
+        function saveData() {
+            localStorage.setItem('raffleRanges', JSON.stringify(ranges));
+            localStorage.setItem('calledTickets', JSON.stringify(calledTickets));
+            localStorage.setItem('drawName', document.getElementById('drawName').value);
+        }
+
+        function formatTicketNumber(num) {
+            const numStr = num.toString();
+            if (numStr.length <= 3) {
+                return numStr;
+            }
+            // Add dash before last 3 digits
+            const prefix = numStr.slice(0, -3);
+            const lastThree = numStr.slice(-3);
+            return `${prefix}-${lastThree}`;
+        }
+
+        function addRange() {
+            const color = document.getElementById('rangeColor').value;
+            const start = document.getElementById('rangeStart').value.replace(/\D/g, '');
+            const end = document.getElementById('rangeEnd').value.replace(/\D/g, '');
+            const startNum = parseInt(start);
+            const endNum = parseInt(end);
+            
+            if (!start || !end || startNum > endNum) {
+                alert('Please enter valid start and end numbers');
+                return;
+            }
+
+            if (!ranges[color]) {
+                ranges[color] = [];
+            }
+            
+            ranges[color].push({ start: startNum, end: endNum });
+            document.getElementById('rangeStart').value = '';
+            document.getElementById('rangeEnd').value = '';
+            saveData();
+            updateDisplay();
+        }
+
+        function setInputMode(mode) {
+            currentInputMode = mode;
+            document.querySelectorAll('.toggle-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            if (mode === 'full') {
+                document.getElementById('ticketNumber').style.display = 'block';
+                document.getElementById('ticketLastThree').style.display = 'none';
+            } else {
+                document.getElementById('ticketNumber').style.display = 'none';
+                document.getElementById('ticketLastThree').style.display = 'block';
+            }
+        }
+
+        function addCalledTicket() {
+            const color = document.getElementById('ticketColor').value;
+            let ticketData = {};
+            
+            if (currentInputMode === 'full') {
+                const number = document.getElementById('ticketNumber').value.replace(/\D/g, '');
+                const ticketNum = parseInt(number);
+                if (!ticketNum && ticketNum !== 0) {
+                    alert('Please enter a valid ticket number');
+                    return;
+                }
+                ticketData = {
+                    number: ticketNum,
+                    fullNumber: ticketNum,
+                    lastThree: null,
+                    inputMode: 'full'
+                };
+            } else {
+                const lastThree = document.getElementById('ticketLastThree').value.padStart(3, '0');
+                if (lastThree.length !== 3 || !/^\d+$/.test(lastThree)) {
+                    alert('Please enter exactly 3 digits for the last three numbers');
+                    return;
+                }
+                ticketData = {
+                    number: lastThree,
+                    fullNumber: null,
+                    lastThree: lastThree,
+                    inputMode: 'lastThree'
+                };
+            }
+
+            ticketData.color = color;
+            ticketData.timestamp = new Date().toLocaleTimeString();
+            
+            calledTickets.unshift(ticketData);
+            document.getElementById('ticketNumber').value = '';
+            document.getElementById('ticketLastThree').value = '';
+            saveData();
+            updateDisplay();
+        }
+
+        function isWinningTicket(ticket) {
+            const colorRanges = ranges[ticket.color] || [];
+            
+            if (ticket.inputMode === 'full') {
+                return colorRanges.some(range => 
+                    ticket.fullNumber >= range.start && ticket.fullNumber <= range.end
+                );
+            } else {
+                return colorRanges.some(range => {
+                    for (let num = range.start; num <= range.end; num++) {
+                        const numStr = num.toString().padStart(3, '0');
+                        const lastThreeDigits = numStr.slice(-3);
+                        if (lastThreeDigits === ticket.lastThree) {
+                            return true;
+                        }
+                    }
+                    return false;
+                });
+            }
+        }
+
+        function getWinningNumbers(ticket) {
+            if (ticket.inputMode !== 'lastThree' || !isWinningTicket(ticket)) {
+                return [];
+            }
+
+            const colorRanges = ranges[ticket.color] || [];
+            const winningNumbers = [];
+
+            colorRanges.forEach(range => {
+                for (let num = range.start; num <= range.end; num++) {
+                    const numStr = num.toString().padStart(3, '0');
+                    const lastThreeDigits = numStr.slice(-3);
+                    if (lastThreeDigits === ticket.lastThree) {
+                        winningNumbers.push(num);
+                    }
+                }
+            });
+
+            return winningNumbers;
+        }
+
+        function deleteRange(color, index) {
+            if (ranges[color]) {
+                ranges[color].splice(index, 1);
+                // Remove color if no ranges left
+                if (ranges[color].length === 0) {
+                    delete ranges[color];
+                }
+            }
+            saveData();
+            updateDisplay();
+        }
+
+        function deleteCalledTicket(index) {
+            calledTickets.splice(index, 1);
+            saveData();
+            updateDisplay();
+        }
+
+        function clearAll() {
+            if (confirm('Are you sure you want to clear all data?')) {
+                ranges = { 
+                    red: [{start: 10000000, end: 10000999}],
+                    blue: [{start: 20000000, end: 20000999}]
+                };
+                calledTickets = [];
+                document.getElementById('drawName').value = '';
+                localStorage.removeItem('raffleRanges');
+                localStorage.removeItem('calledTickets');
+                localStorage.removeItem('drawName');
+                updateDisplay();
+            }
+        }
+
+        function updateDisplay() {
+            // Update available colors in ticket color dropdown
+            const ticketColorSelect = document.getElementById('ticketColor');
+            ticketColorSelect.innerHTML = '';
+            
+            Object.keys(ranges).forEach(color => {
+                if (ranges[color] && ranges[color].length > 0) {
+                    const option = document.createElement('option');
+                    option.value = color;
+                    option.textContent = availableColors[color];
+                    option.className = `color-${color}`;
+                    ticketColorSelect.appendChild(option);
+                }
+            });
+
+            // Update ranges display
+            const colorSections = document.getElementById('colorSections');
+            colorSections.innerHTML = '';
+
+            Object.keys(ranges).forEach(color => {
+                if (ranges[color] && ranges[color].length > 0) {
+                    const section = document.createElement('div');
+                    section.className = `color-section ${color}`;
+                    
+                    const header = document.createElement('div');
+                    header.className = `color-header ${color}`;
+                    header.innerHTML = `
+                        <h4>${availableColors[color]} Tickets</h4>
+                    `;
+                    
+                    const rangesContainer = document.createElement('div');
+                    rangesContainer.innerHTML = ranges[color].map((range, index) => `
+                        <div class="range-item ${color}">
+                            <span>${formatTicketNumber(range.start)} - ${formatTicketNumber(range.end)}</span>
+                            <button onclick="deleteRange('${color}', ${index})">×</button>
+                        </div>
+                    `).join('');
+                    
+                    section.appendChild(header);
+                    section.appendChild(rangesContainer);
+                    colorSections.appendChild(section);
+                }
+            });
+
+            // Update called tickets display
+            document.getElementById('calledTickets').innerHTML = calledTickets.map((ticket, index) => {
+                const isWinner = isWinningTicket(ticket);
+                const winningNumbers = getWinningNumbers(ticket);
+                
+                return `
+                    <div class="ticket-item ${ticket.color} ${isWinner ? 'winner' : 'loser'}">
+                        <div class="ticket-info">
+                            <span class="ticket-number">
+                                ${ticket.inputMode === 'full' ? formatTicketNumber(ticket.fullNumber) : `XXX-${ticket.lastThree}`}
+                            </span>
+                            <span class="ticket-color">${availableColors[ticket.color]}</span>
+                            <span class="ticket-mode">(${ticket.inputMode === 'full' ? 'full' : 'last 3'})</span>
+                            <span class="ticket-time">${ticket.timestamp}</span>
+                        </div>
+                        
+                        <div class="ticket-result">
+                            ${isWinner ? `
+                                <div>
+                                    <div>🎉 WINNER!</div>
+                                    ${ticket.inputMode === 'lastThree' && winningNumbers.length > 0 ? `
+                                        <div class="winning-numbers">Matching: ${winningNumbers.map(formatTicketNumber).join(', ')}</div>
+                                    ` : ''}
+                                </div>
+                            ` : '❌ Not in range'}
+                        </div>
+                        
+                        <button onclick="deleteCalledTicket(${index})" class="delete-ticket">×</button>
+                    </div>
+                `;
+            }).join('') || '<p>No tickets called yet</p>';
+        }
+
+        // Initialize
+        document.getElementById('drawName').addEventListener('input', saveData);
+        loadData();
+    </script>
+</body>
+</html>
