@@ -2,6 +2,8 @@
 <html lang="en">
     
 <head>
+    <script defer src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Raffle Ticket Tracker</title>
@@ -774,6 +776,131 @@
     <script src="./enhancers/win-effects.js"></script>
 <audio id="win-sfx" src="./win.mp3" preload="auto" playsinline></audio>
 <script src="./enhancers/win-effects.js?v=2"></script>
+<script>
+/* Single-file confetti + sound (no separate JS or MP3 required) */
+(function () {
+  const confettiEnabled = localStorage.getItem('confettiEnabled') !== 'false';
+  const soundEnabled    = localStorage.getItem('soundEnabled')    !== 'false';
+  const celebrated = new Set();
+
+  // ---------- AUDIO ----------
+  let audioEl = document.getElementById('win-sfx'); // optional mp3 if you add it later
+  let mp3Ok = false;
+
+  function fallbackChime() {
+    try {
+      const C = window.AudioContext || window.webkitAudioContext;
+      if (!C) return;
+      const ctx = new C();
+      const now = ctx.currentTime;
+      const beep = (f, t0, dur, type='triangle', g0=0.0001, g1=0.18)=>{
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = type; o.frequency.value = f;
+        g.gain.setValueAtTime(g0, t0);
+        g.gain.exponentialRampToValueAtTime(g1, t0+0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0+dur);
+        o.connect(g); g.connect(ctx.destination);
+        o.start(t0); o.stop(t0+dur+0.02);
+      };
+      beep(987.77,  now,      0.18); // B5
+      beep(1318.51, now+0.04, 0.18); // E6
+    } catch {}
+  }
+
+  function playWinSound() {
+    if (!soundEnabled) return;
+    if (mp3Ok && audioEl) {
+      const p = audioEl.play();
+      if (p && typeof p.then === 'function') {
+        p.catch(() => {
+          const once = () => { audioEl.play().catch(fallbackChime); };
+          document.body.addEventListener('click', once, { once:true });
+          console.log('🔈 Autoplay blocked — will play after next click.');
+        });
+      }
+    } else {
+      fallbackChime();
+    }
+  }
+
+  if (!audioEl) {
+    // create an <audio> tag so we can prime autoplay; leave src unset until you add win.mp3
+    audioEl = document.createElement('audio');
+    audioEl.id = 'win-sfx';
+    audioEl.preload = 'auto';
+    audioEl.setAttribute('playsinline', '');
+    document.body.appendChild(audioEl);
+  } else {
+    audioEl.addEventListener('canplaythrough', () => { mp3Ok = true; }, { once:true });
+    audioEl.addEventListener('error', () => { mp3Ok = false; });
+    audioEl.load();
+    mp3Ok = !!audioEl.src;
+  }
+
+  function primeOnce() {
+    if (mp3Ok) audioEl.play().then(()=>{ audioEl.pause(); audioEl.currentTime = 0; }).catch(()=>{});
+    window.removeEventListener('pointerdown', primeOnce, true);
+    window.removeEventListener('keydown',     primeOnce, true);
+    window.removeEventListener('touchstart',  primeOnce, true);
+  }
+  window.addEventListener('pointerdown', primeOnce, true);
+  window.addEventListener('keydown',     primeOnce, true);
+  window.addEventListener('touchstart',  primeOnce, true);
+
+  // ---------- CONFETTI ----------
+  const colorHexMap = {
+    Red:'#e74c3c', Blue:'#3498db', Green:'#27ae60', Yellow:'#f39c12',
+    Purple:'#9b59b6', Orange:'#e67e22', Pink:'#e91e63', Brown:'#795548',
+    Black:'#2c3e50', Gray:'#7f8c8d', Teal:'#009688', Navy:'#34495e'
+  };
+  function celebrate(key, colorName) {
+    if (celebrated.has(key)) return;
+    celebrated.add(key);
+    if (confettiEnabled && typeof window.confetti === 'function') {
+      const c = colorHexMap[colorName] || '#22d3ee';
+      const colors = [c, '#ffffff'];
+      window.confetti({ particleCount: 90, spread: 70, origin: { y: 0.6 }, colors });
+      window.confetti({ particleCount: 60, angle: 60,  spread: 55, origin: { x: 0 }, colors });
+      window.confetti({ particleCount: 60, angle: 120, spread: 55, origin: { x: 1 }, colors });
+    }
+    playWinSound();
+  }
+
+  // ---------- DETECTION (Observer + polling fallback) ----------
+  const container = document.getElementById('calledTickets');
+  if (!container) { console.warn('[win-effects] #calledTickets not found.'); return; }
+
+  function keyFromNode(node) {
+    const num   = node.querySelector('.ticket-number')?.textContent?.trim() || '';
+    const color = node.querySelector('.ticket-color')?.textContent?.trim() || '';
+    return { key: `${color}::${num}`, color };
+  }
+  function scanAndCelebrate() {
+    container.querySelectorAll('.ticket-item.winner').forEach(n => {
+      const { key, color } = keyFromNode(n);
+      if (key && !celebrated.has(key)) celebrate(key, color);
+    });
+  }
+
+  scanAndCelebrate(); // initial (covers refresh)
+
+  const obs = new MutationObserver(muts => {
+    let changed = false;
+    muts.forEach(m => m.addedNodes.forEach(n => {
+      if (n.nodeType !== 1) return;
+      if (n.classList?.contains('ticket-item') || n.querySelector?.('.ticket-item')) changed = true;
+    }));
+    if (changed) scanAndCelebrate();
+  });
+  obs.observe(container, { childList: true, subtree: true });
+
+  setInterval(scanAndCelebrate, 600); // polling fallback
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') scanAndCelebrate();
+  });
+})();
+</script>
 
 </body>
 </html>
